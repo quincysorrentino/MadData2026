@@ -1,0 +1,125 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+  width: 100%;
+}
+
+.videoWrapper {
+  position: relative;
+  width: 100%;
+  background: #000;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.video {
+  width: 100%;
+  max-height: 340px;
+  object-fit: cover;
+  display: block;
+}
+
+.controls {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: center;
+  width: 100%;
+}
+
+.captureBtn {
+  background: var(--color-accent);
+  color: #fff;
+  border-radius: var(--radius-pill);
+  padding: 10px 28px;
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  transition: background var(--transition-fast), transform var(--transition-fast);
+  border: none;
+}
+
+.captureBtn:hover {
+  background: var(--color-accent-hover);
+  transform: translateY(-1px);
+}
+
+.cancelBtn {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  padding: 10px 24px;
+  font-size: var(--font-size-base);
+  transition: all var(--transition-fast);
+}
+
+.cancelBtn:hover {
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+.startBtn {
+  background: var(--color-bg-surface);
+  border: 2px dashed var(--color-border);
+  color: var(--color-text-primary);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-xl);
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.startBtn:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+}
+
+.startBtnIcon {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.errorText {
+  font-size: var(--font-size-sm);
+  color: var(--color-error);
+  text-align: center;
+}
+
+.capturedPreview {
+  width: 100%;
+  max-height: 340px;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
+}
+
+.capturedActions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.retakeBtn {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 18px;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.retakeBtn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
