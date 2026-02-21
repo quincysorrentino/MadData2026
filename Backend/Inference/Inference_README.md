@@ -1,198 +1,103 @@
-# Inference Backend (Hackathon Starter)
+# Backend Inference (Snapdragon Native-First)
 
-This backend now supports a two-stage pipeline:
-1) optional lesion segmentation to get bounding boxes
-2) classification on the lesion crop (or full image if no box)
+This guide is intentionally **native-first** for Snapdragon devices (simpler debugging than containers).
 
-> ⚠️ This starter is for hackathon prototyping only, not medical diagnosis.
+## 1) Prerequisites (on Snapdragon device)
 
-## 1) Setup
+- OS: Linux (Ubuntu/Debian recommended)
+- Python: `3.10+`
+- System packages: `python3-venv`, `python3-pip`
+
+Install system deps:
 
 ```bash
-cd Backend/Inference
+sudo apt update
+sudo apt install -y python3-venv python3-pip
+```
+
+## 2) Clone and set up environment
+
+```bash
+git clone https://github.com/quincysorrentino/MadData2026.git
+cd MadData2026/Backend/Inference
+
 python3 -m venv .venv
 source .venv/bin/activate
+pip install --upgrade pip
 pip install -r requirements.txt
 cp .env.example .env
 ```
 
-## 2) Run API
+## 3) Download models (native)
+
+From inside `Backend/Inference`:
 
 ```bash
-uvicorn app.main:app --reload --port 8000
-```
-
-Endpoints:
-- `GET /health`
-- `POST /v1/infer`
-- `POST /infer` (alias)
-- `POST /v1/infer/debug` (includes fusion decision diagnostics)
-
-Request: multipart field name `file`.
-
-## 3) Response format (with bounding boxes)
-
-```json
-{
-  "label": "melanoma",
-  "confidence": 0.91,
-  "boxes": [
-    {
-      "x_min": 42,
-      "y_min": 55,
-      "width": 131,
-      "height": 146,
-      "score": 0.67,
-      "label": "lesion"
-    }
-  ],
-  "model_version": "external:classifier.onnx+segmenter:segmenter.onnx"
-}
-```
-
-## 4) Use your pulled models
-
-You can download from Hugging Face with:
-
-```bash
-python download_hf_models.py \
-  --segmenter Ahmed-Selem/Shifaa-Skin-Cancer-UNet-Segmentation \
-  --classifier <your-classifier-repo-id>
-```
-
-If your classifier is not decided yet, run only segmenter:
-
-```bash
+source .venv/bin/activate
 python download_hf_models.py
 ```
 
-Set `.env` values:
+Expected output location:
+
+- `Backend/Inference/models/classifier.onnx`
+- (optional) segmentation model files if enabled in your config
+
+## 4) Start API locally
 
 ```bash
-# Classifier (multi-class)
-MODEL_PATH=/absolute/path/to/classifier.onnx
-MODEL_HF_DIR=
-MODEL_LABELS=melanoma,basal_cell_carcinoma,squamous_cell_carcinoma,nevus,keratosis,dermatofibroma,vascular_lesion
-MODEL_INPUT_SIZE=224
-
-# Segmenter for lesion localization
-SEGMENTER_MODEL_PATH=/absolute/path/to/segmenter.onnx
-SEGMENTER_INPUT_SIZE=128
-SEGMENTER_THRESHOLD=0.5
-SEGMENTER_MIN_AREA_RATIO=0.01
-SEGMENTER_MAX_AREA_RATIO=0.85
-
-# Prediction fusion (full image vs lesion crop)
-FUSION_MARGIN=0.05
-FUSION_MIN_CROP_CONFIDENCE=0.55
-FUSION_MIN_BOX_SCORE=0.08
-
-# Localization strategy
-LOCALIZATION_MODE=classifier_first
-SALIENCY_PERCENTILE=93
-SALIENCY_MIN_AREA_RATIO=0.01
-SALIENCY_MAX_AREA_RATIO=0.85
-```
-
-Supported formats:
-- classifier: `.onnx`, `.pt`, `.jit`, `.torchscript`
-- segmenter: `.onnx`, `.pt`, `.jit`, `.torchscript`
-
-Hugging Face classifier directory support:
-- set `MODEL_HF_DIR=/absolute/path/to/hf-model-dir`
-- this is useful for repos that provide `model.safetensors` + `config.json`
-- when `MODEL_HF_DIR` is set, `MODEL_PATH` is ignored
-
-Install model-runtime dependencies (as needed):
-
-```bash
-pip install onnxruntime
-# OR
-pip install torch
-# If using Hugging Face safetensors classifier
-pip install transformers safetensors
-```
-
-Quick test:
-
-```bash
-curl -X POST "http://127.0.0.1:8000/infer" -F "file=@/path/to/test.jpg"
-```
-
-Inference behavior notes:
-- runs full-image classification always
-- gets box from classifier saliency first (`LOCALIZATION_MODE=classifier_first`), then segmenter fallback
-- if a valid lesion box exists, also runs crop classification
-- switches to crop prediction only if crop confidence exceeds full-image confidence by `FUSION_MARGIN`
-- requires lesion box score >= `FUSION_MIN_BOX_SCORE` before crop override is allowed
-- rejects implausible boxes using `SEGMENTER_MIN_AREA_RATIO` and `SEGMENTER_MAX_AREA_RATIO`
-
-Debug endpoint example:
-
-```bash
-curl -X POST "http://127.0.0.1:8000/infer/debug" -F "file=@/path/to/test.jpg"
-```
-
-## 5) Qualcomm AI Hub Workbench scripts
-
-- `ai_hub_workbench.py`: classification compile/infer/profile flow
-- `ai_hub_workbench_segmentation.py`: segmentation compile/infer/profile flow
-
-Run either script:
-
-```bash
-export QAIHUB_API_TOKEN=your_token_here
-python ai_hub_workbench.py
-python ai_hub_workbench_segmentation.py
-```
-
-Optional env vars:
-- `QAIHUB_DEVICE` (default: `Samsung Galaxy S25 (Family)`)
-- `QAIHUB_TARGET_RUNTIME` (default: `tflite`)
-
-## 6) Run tests
-
-```bash
-pytest -q
-```
-
-## 7) Frontend handoff quickstart
-
-Start backend for the frontend engineer:
-
-```bash
-cd Backend/Inference
 source .venv/bin/activate
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-Useful request examples:
+Health check:
 
 ```bash
-curl -X GET "http://127.0.0.1:8000/health"
-curl -X POST "http://127.0.0.1:8000/infer" -F "file=@/path/to/image.jpg"
-curl -X POST "http://127.0.0.1:8000/infer/debug" -F "file=@/path/to/image.jpg"
+curl -sS http://127.0.0.1:8000/health
 ```
 
-## 8) Accuracy evaluation workflow
-
-Generate labeled evaluation images from HAM10000 and evaluate:
+Test inference:
 
 ```bash
-cd Backend/Inference
+curl -sS -X POST "http://127.0.0.1:8000/infer" -F "file=@test.jpg"
+```
+
+## 5) Replicate on any other Snapdragon device
+
+Use this exact sequence on each device:
+
+1. Install Python + `venv` system packages.
+2. Clone same repo branch/tag.
+3. Create venv and install `requirements.txt`.
+4. Copy `.env.example` to `.env` and keep settings consistent.
+5. Run `python download_hf_models.py` on-device.
+6. Start with `uvicorn app.main:app --host 0.0.0.0 --port 8000`.
+7. Validate with `/health` then `/infer`.
+
+### Fast replication option (recommended)
+
+After a known-good setup on one Snapdragon device:
+
+- Save package list:
+
+```bash
 source .venv/bin/activate
-
-# Create balanced labeled sample set
-python pull_labeled_test_images.py --per-class 50 --out-dir test_samples/ham10000_50x2
-
-# Evaluate live API endpoint
-python evaluate_pipeline_accuracy.py \
-  --manifest test_samples/ham10000_50x2/manifest.csv \
-  --endpoint http://127.0.0.1:8000/infer \
-  --report-out test_samples/ham10000_50x2/eval_report.json
+pip freeze > requirements.lock.txt
 ```
 
-Notes:
-- `test_samples/` is intentionally git-ignored (generated data).
-- Re-run these commands anytime to produce fresh benchmark reports.
+- On the next device, install with:
 
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.lock.txt
+```
+
+This helps keep behavior consistent across Snapdragon machines.
+
+## 6) Troubleshooting (native)
+
+- `ModuleNotFoundError`: confirm venv is active and dependencies are installed.
+- Model not found errors: re-run `python download_hf_models.py` and verify `models/` contents.
+- Slow startup on first run: expected while model files load.
+- Port conflict on `8000`: use another port, e.g. `--port 8001`.
