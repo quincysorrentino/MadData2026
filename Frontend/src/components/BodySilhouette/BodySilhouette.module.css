@@ -1,0 +1,93 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-lg);
+  width: 100%;
+}
+
+.svgWrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.rotateWrapper {
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.rotateWrapper:active {
+  cursor: grabbing;
+}
+
+.svg {
+  width: 220px;
+  height: 520px;
+  overflow: visible;
+  filter: drop-shadow(0 4px 24px rgba(74, 144, 217, 0.18));
+}
+
+/* Outline / silhouette base */
+.bodyOutline {
+  fill: rgba(17, 34, 64, 0.8);
+  stroke: rgba(74, 144, 217, 0.35);
+  stroke-width: 1.5;
+}
+
+/* Individual clickable zones */
+.bodyPart {
+  fill: rgba(74, 144, 217, 0.08);
+  stroke: rgba(74, 144, 217, 0.4);
+  stroke-width: 1.5;
+  cursor: pointer;
+  transition: fill var(--transition-fast), stroke var(--transition-fast), stroke-width var(--transition-fast);
+}
+
+.bodyPart:hover,
+.bodyPartHovered {
+  fill: rgba(74, 144, 217, 0.32);
+  stroke: #4a90d9;
+  stroke-width: 2.5;
+}
+
+/* Tooltip */
+.tooltip {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tooltipText {
+  background: var(--color-accent);
+  color: #fff;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  padding: 4px 14px;
+  border-radius: var(--radius-pill);
+  letter-spacing: 0.02em;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Hint */
+.hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hint::before {
+  content: '↔';
+  color: var(--color-accent);
+}
