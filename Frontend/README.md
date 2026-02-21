@@ -1,4 +1,4 @@
-# Frontend Implementation Plan
+# Frontend Implementation
 
 ## Context
 The backend (FastAPI at `localhost:8080`) is fully built with three endpoints:
