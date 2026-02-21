@@ -14,6 +14,108 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 
+def _parse_bool(value: str | None, default: bool = False) -> bool:
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _requested_ort_providers() -> list[str]:
+    raw = os.getenv("ORT_EXECUTION_PROVIDERS", "QNNExecutionProvider,CPUExecutionProvider")
+    providers = [provider.strip() for provider in raw.split(",") if provider.strip()]
+    if not providers:
+        return ["CPUExecutionProvider"]
+    return providers
+
+
+def _provider_options(provider_name: str) -> dict[str, str]:
+    if provider_name != "QNNExecutionProvider":
+        return {}
+
+    options: dict[str, str] = {}
+    backend_path = os.getenv("QNN_BACKEND_PATH", "").strip()
+    if backend_path:
+        options["backend_path"] = backend_path
+
+    htp_performance_mode = os.getenv("QNN_HTP_PERFORMANCE_MODE", "").strip()
+    if htp_performance_mode:
+        options["htp_performance_mode"] = htp_performance_mode
+
+    profiling_level = os.getenv("QNN_PROFILING_LEVEL", "").strip()
+    if profiling_level:
+        options["profiling_level"] = profiling_level
+
+    return options
+
+
+def _build_onnx_session(model_path: str):
+    try:
+        import onnxruntime as ort
+    except ImportError as exc:
+        raise ValueError(
+            "ONNX model selected but onnxruntime is not installed. "
+            "Install the appropriate runtime build for your target (e.g., QNN-enabled build on Snapdragon)."
+        ) from exc
+
+    available_providers = ort.get_available_providers()
+    requested_providers = _requested_ort_providers()
+    enable_cpu_fallback = _parse_bool(os.getenv("ORT_ENABLE_CPU_FALLBACK"), default=True)
+
+    selected_providers: list[str] = [
+        provider for provider in requested_providers if provider in available_providers
+    ]
+
+    if not selected_providers:
+        raise ValueError(
+            "None of the requested ORT providers are available. "
+            f"Requested={requested_providers}, Available={available_providers}."
+        )
+
+    if not enable_cpu_fallback:
+        selected_providers = [
+            provider for provider in selected_providers if provider != "CPUExecutionProvider"
+        ]
+        if not selected_providers:
+            raise ValueError(
+                "ORT_ENABLE_CPU_FALLBACK is false but no non-CPU provider is available. "
+                f"Requested={requested_providers}, Available={available_providers}."
+            )
+
+    providers_arg: list[str | tuple[str, dict[str, str]]] = []
+    for provider_name in selected_providers:
+        options = _provider_options(provider_name)
+        if options:
+            providers_arg.append((provider_name, options))
+        else:
+            providers_arg.append(provider_name)
+
+    session = ort.InferenceSession(model_path, providers=providers_arg)
+    active_providers = session.get_providers()
+
+    print(
+        "[Inference] ONNX Runtime provider selection: "
+        f"requested={requested_providers}, available={available_providers}, active={active_providers}"
+    )
+
+    return session
+
+
+def _is_truthy_env(var_name: str, default: bool = False) -> bool:
+    return _parse_bool(os.getenv(var_name), default=default)
+
+
+def _discover_onnx_model_path(root_dir: Path) -> str:
+    models_dir = root_dir / "models"
+    if not models_dir.exists():
+        return ""
+
+    candidates = sorted(models_dir.rglob("*.onnx"))
+    if not candidates:
+        return ""
+
+    return str(candidates[0])
+
+
 class BoundingBoxData(TypedDict):
     x_min: int
     y_min: int
@@ -64,11 +166,11 @@ class ExternalModel:
 
         suffix = Path(model_path).suffix.lower()
         if suffix == ".onnx":
-            import onnxruntime as ort
-
             self.backend = "onnx"
-            self.session = ort.InferenceSession(model_path, providers=["CPUExecutionProvider"])
+            self.session = _build_onnx_session(model_path)
             self.input_name = self.session.get_inputs()[0].name
+            providers = self.session.get_providers()
+            self.model_version = f"external:{Path(model_path).name}@{providers[0]}"
         elif suffix in {".pt", ".jit", ".torchscript"}:
             import torch
 
@@ -272,11 +374,11 @@ class SegmenterModel:
 
         suffix = Path(model_path).suffix.lower()
         if suffix == ".onnx":
-            import onnxruntime as ort
-
             self.backend = "onnx"
-            self.session = ort.InferenceSession(model_path, providers=["CPUExecutionProvider"])
+            self.session = _build_onnx_session(model_path)
             self.input_name = self.session.get_inputs()[0].name
+            providers = self.session.get_providers()
+            self.model_version = f"segmenter:{Path(model_path).name}@{providers[0]}"
         elif suffix in {".pt", ".jit", ".torchscript"}:
             import torch
 
@@ -568,6 +670,24 @@ def build_classifier() -> PlaceholderSkinCancerModel | ExternalModel | HuggingFa
 
     model_path = os.getenv("MODEL_PATH", "").strip()
     if not model_path:
+        discovered = _discover_onnx_model_path(Path(__file__).resolve().parents[1])
+        if discovered:
+            model_path = discovered
+            print(f"[Inference] MODEL_PATH not set. Auto-selected ONNX model: {model_path}")
+
+    require_npu = _is_truthy_env("REQUIRE_NPU", default=False)
+    require_external_model = _is_truthy_env("REQUIRE_EXTERNAL_MODEL", default=False)
+    if require_npu:
+        require_external_model = True
+
+    if not model_path:
+        if require_external_model:
+            raise ValueError(
+                "No classifier model configured. Set MODEL_PATH to an ONNX model file "
+                "(required for NPU), or disable REQUIRE_EXTERNAL_MODEL/REQUIRE_NPU."
+            )
+
+        print("[Inference] MODEL_PATH not set. Using placeholder classifier (CPU-only).")
         return PlaceholderSkinCancerModel()
 
     labels_csv = os.getenv("MODEL_LABELS", "non_suspicious,suspicious")
