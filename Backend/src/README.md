@@ -124,7 +124,7 @@ ALLOWED_ORIGINS    = ["http://localhost:3000"] # frontend dev server
 ## Running Locally
 
 ```bash
-cd Backend
+cd Backend/src
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8080
 ```
