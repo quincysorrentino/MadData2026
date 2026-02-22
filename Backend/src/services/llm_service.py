@@ -6,7 +6,7 @@ from config import LLM_API_URL, LLM_MODEL
 
 async def call_llm(system_prompt: str, conversation: list[dict]) -> str:
     """
-    Call the locally-running Mistral LLM via Nexa AI's OpenAI-compatible API.
+    Call the locally-running LLM via Ollama's OpenAI-compatible API.
 
     Prepends the system prompt as the first message on every call — this is
     required because the REST API is stateless. From the caller's perspective
@@ -55,7 +55,7 @@ async def call_llm(system_prompt: str, conversation: list[dict]) -> str:
         raise HTTPException(
             status_code=503,
             detail=f"Could not connect to the LLM server at {LLM_API_URL}. "
-                   "Ensure the Nexa AI / Qualcomm AI Server is running.",
+                   "Ensure the Ollama server is running (ollama serve).",
         )
     except httpx.HTTPStatusError as e:
         raise HTTPException(
