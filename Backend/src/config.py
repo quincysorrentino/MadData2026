@@ -7,7 +7,7 @@ def _parse_origins(raw_value: str) -> list[str]:
 
 CLASSIFIER_API_URL = os.getenv("CLASSIFIER_API_URL", "http://127.0.0.1:8000")
 LLM_API_URL = os.getenv("LLM_API_URL", "http://localhost:9000")
-LLM_MODEL = os.getenv("LLM_MODEL", "mistral")
+LLM_MODEL = os.getenv("LLM_MODEL", "qwen3:8b")
 ALLOWED_ORIGINS = _parse_origins(
 	os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
 )
