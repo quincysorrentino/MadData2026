@@ -1,4 +1,5 @@
 import httpx
+import os
 from fastapi import HTTPException
 from config import LLM_API_URL, LLM_MODEL
 
@@ -23,6 +24,20 @@ async def call_llm(system_prompt: str, conversation: list[dict]) -> str:
         HTTPException 503 if the Nexa AI server is unreachable.
         HTTPException 502 if the server returns an unexpected response.
     """
+    if os.getenv("LLM_STUB_MODE", "false").lower() in {"1", "true", "yes", "on"}:
+        latest_user_message = ""
+        for message in reversed(conversation):
+            if message.get("role") == "user":
+                latest_user_message = message.get("content", "")
+                break
+
+        if latest_user_message:
+            return (
+                "Stub response (LLM_STUB_MODE enabled): "
+                f"received your message '{latest_user_message}'."
+            )
+        return "Stub response (LLM_STUB_MODE enabled): diagnosis generated successfully."
+
     messages = [{"role": "system", "content": system_prompt}] + conversation
 
     try:

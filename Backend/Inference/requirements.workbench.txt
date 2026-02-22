@@ -1,0 +1,7 @@
+qai-hub[torch]
+torch
+transformers
+numpy
+pillow
+requests
+python-dotenv

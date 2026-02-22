@@ -1,4 +1,13 @@
-CLASSIFIER_API_URL = "http://localhost:8001"   # Update when classifier API is ready
-LLM_API_URL        = "http://localhost:11434"  # Ollama server URL
-LLM_MODEL          = "qwen3:8b"               # Model served by Ollama
-ALLOWED_ORIGINS    = ["http://localhost:3000"] # Frontend dev server; update for production
+import os
+
+
+def _parse_origins(raw_value: str) -> list[str]:
+	return [origin.strip() for origin in raw_value.split(",") if origin.strip()]
+
+
+CLASSIFIER_API_URL = os.getenv("CLASSIFIER_API_URL", "http://127.0.0.1:8000")
+LLM_API_URL = os.getenv("LLM_API_URL", "http://localhost:9000")
+LLM_MODEL = os.getenv("LLM_MODEL", "qwen3:8b")
+ALLOWED_ORIGINS = _parse_origins(
+	os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+)
