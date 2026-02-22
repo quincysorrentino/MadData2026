@@ -48,7 +48,7 @@ async def call_llm(system_prompt: str, conversation: list[dict]) -> str:
                     "model": LLM_MODEL,
                     "messages": messages,
                 },
-                timeout=60.0,
+                timeout=180.0,
             )
             response.raise_for_status()
     except httpx.ConnectError:
@@ -56,6 +56,11 @@ async def call_llm(system_prompt: str, conversation: list[dict]) -> str:
             status_code=503,
             detail=f"Could not connect to the LLM server at {LLM_API_URL}. "
                    "Ensure the Ollama server is running (ollama serve).",
+        )
+    except httpx.ReadTimeout:
+        raise HTTPException(
+            status_code=504,
+            detail="LLM server timed out generating a response. The model may still be loading — try again in a moment.",
         )
     except httpx.HTTPStatusError as e:
         raise HTTPException(

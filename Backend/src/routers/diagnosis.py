@@ -27,6 +27,8 @@ async def diagnose(image: UploadFile = File(...)) -> DiagnosisResponse:
         image_bytes, image.filename or "image"
     )
 
+    print(f"[classifier] classification={classification!r}  bounding_box={bounding_box_dict}")
+
     state.session["bounding_box"] = bounding_box_dict
 
     full_prompt = prompt_service.build_full_prompt(
