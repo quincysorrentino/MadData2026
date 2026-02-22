@@ -13,7 +13,7 @@ interface AppState {
 interface AppContextValue extends AppState {
   setBodyPart: (id: number, name: string) => void
   setUploadedImage: (file: File) => void
-  setDiagnosisResult: (diagnosis: string, box: BoundingBox) => void
+  setDiagnosisResult: (diagnosis: string, box: BoundingBox | null) => void
   resetSession: () => void
 }
 
@@ -45,7 +45,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
-  const setDiagnosisResult = useCallback((diagnosis: string, box: BoundingBox) => {
+  const setDiagnosisResult = useCallback((diagnosis: string, box: BoundingBox | null) => {
     setState(prev => ({ ...prev, diagnosis, boundingBox: box }))
   }, [])
 

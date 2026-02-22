@@ -16,6 +16,14 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
+      '/infer': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/v1': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
     },
   },
 })

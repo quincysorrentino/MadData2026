@@ -52,7 +52,7 @@ export default function UploadPage() {
     setError(null)
     try {
       setUploadedImage(selectedFile)
-      const result = await postDiagnose(selectedFile)
+      const result = await postDiagnose(selectedFile, state.bodyPartName)
       setDiagnosisResult(result.diagnosis, result.bounding_box)
       navigate('/chat', { state: { fromUpload: true } })
     } catch {

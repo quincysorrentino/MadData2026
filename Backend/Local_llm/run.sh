@@ -7,7 +7,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
 echo "=================================================="
-echo "🚀 Local LLM Server (Ollama + Qwen 3 8B)"
+echo "🚀 Local LLM Server (Ollama + Qwen2.5 3B)"
 echo "=================================================="
 
 # Check if Ollama is running
@@ -26,11 +26,11 @@ fi
 # Check model
 echo ""
 echo "📦 Checking Qwen model..."
-if ollama list | grep -q "qwen:8b"; then
-    echo "✅ Qwen 3 8B found"
+if ollama list | grep -q "qwen2.5:3b"; then
+    echo "✅ Qwen2.5 3B found"
 else
     echo "⚠️  Qwen not found. Pulling..."
-    ollama pull qwen:8b
+    ollama pull qwen2.5:3b
     echo "✅ Qwen pulled"
 fi
 

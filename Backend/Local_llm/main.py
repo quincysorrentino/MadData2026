@@ -18,6 +18,10 @@ import os
 import requests
 import httpx
 import json
+import asyncio
+import threading
+import time
+from contextlib import asynccontextmanager
 from typing import Optional, Dict, List
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -56,8 +60,84 @@ logger = logging.getLogger(__name__)
 #     Port where this FastAPI server runs
 # -------------------------------------------------------------------------
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-MODEL_NAME = "qwen3:8b"  # Qwen 3 8B model served by Ollama
+MODEL_NAME = os.getenv("MODEL_NAME", "qwen2.5:3b")
 LLM_PORT = int(os.getenv("LLM_PORT", 9000))
+OLLAMA_TIMEOUT_SECONDS = int(os.getenv("OLLAMA_TIMEOUT_SECONDS", "300"))
+OLLAMA_MAX_TOKENS = int(os.getenv("OLLAMA_MAX_TOKENS", "512"))
+OLLAMA_NUM_CTX = int(os.getenv("OLLAMA_NUM_CTX", "1024"))
+OLLAMA_NUM_THREAD = int(os.getenv("OLLAMA_NUM_THREAD", "4"))
+OLLAMA_CONCURRENCY = int(os.getenv("OLLAMA_CONCURRENCY", "1"))
+OLLAMA_MODEL_CACHE_TTL_SECONDS = int(os.getenv("OLLAMA_MODEL_CACHE_TTL_SECONDS", "60"))
+
+if OLLAMA_NUM_CTX <= 0:
+    OLLAMA_NUM_CTX = 1024
+if OLLAMA_NUM_THREAD <= 0:
+    OLLAMA_NUM_THREAD = 4
+if OLLAMA_CONCURRENCY <= 0:
+    OLLAMA_CONCURRENCY = 1
+if OLLAMA_MODEL_CACHE_TTL_SECONDS <= 0:
+    OLLAMA_MODEL_CACHE_TTL_SECONDS = 60
+
+_generation_semaphore = asyncio.Semaphore(OLLAMA_CONCURRENCY)
+_models_cache_lock = threading.Lock()
+_cached_models: List[str] = []
+_cached_models_expiry: float = 0.0
+
+
+def _get_available_ollama_models() -> List[str]:
+    global _cached_models
+    global _cached_models_expiry
+
+    now = time.monotonic()
+    if now < _cached_models_expiry and _cached_models:
+        return list(_cached_models)
+
+    with _models_cache_lock:
+        now = time.monotonic()
+        if now < _cached_models_expiry and _cached_models:
+            return list(_cached_models)
+
+    response = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=10)
+    response.raise_for_status()
+    models = response.json().get("models", [])
+    available_models = [str(model.get("name", "")) for model in models if model.get("name")]
+
+    _cached_models = list(available_models)
+    _cached_models_expiry = time.monotonic() + float(OLLAMA_MODEL_CACHE_TTL_SECONDS)
+    return available_models
+
+
+def _select_model(preferred_model: str) -> str:
+    try:
+        available = _get_available_ollama_models()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Could not query Ollama model list at {OLLAMA_BASE_URL}: {exc}",
+        )
+
+    if preferred_model in available:
+        return preferred_model
+
+    # Prevent silent fallback to potentially huge models that can freeze hosts.
+    safe_fallback_candidates = ["qwen2.5:3b", "qwen:0.5b"]
+    for candidate in safe_fallback_candidates:
+        if candidate in available:
+            logger.warning(
+                "Preferred model '%s' not available. Falling back to lightweight model '%s'.",
+                preferred_model,
+                candidate,
+            )
+            return candidate
+
+    raise HTTPException(
+        status_code=503,
+        detail=(
+            f"Requested model '{preferred_model}' is not available. "
+            "Install a lightweight supported model with: "
+            "'ollama pull qwen2.5:3b' or 'ollama pull qwen:0.5b'."
+        ),
+    )
 
 
 # -------------------------------------------------------------------------
@@ -68,10 +148,17 @@ LLM_PORT = int(os.getenv("LLM_PORT", 9000))
 # - Request validation via Pydantic
 # - Structured error handling
 # -------------------------------------------------------------------------
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    await run_startup_checks()
+    yield
+
+
 app = FastAPI(
     title="Local LLM Diagnosis Server",
     description="Ollama-powered Qwen 3 8B for medical diagnosis with dynamic prompts",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 
@@ -233,8 +320,7 @@ Keep response concise and professional. Always recommend consulting a dermatolog
 # - Confirm target model is available
 # - Log warnings if model is missing
 # -------------------------------------------------------------------------
-@app.on_event("startup")
-async def startup():
+async def run_startup_checks() -> None:
     try:
         response = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5)
 
@@ -287,6 +373,7 @@ async def health_check():
 async def diagnose(request: DiagnosisRequest):
 
     try:
+        active_model = _select_model(MODEL_NAME)
         system_prompt = build_diagnosis_prompt(
             request.classification,
             request.confidence,
@@ -303,7 +390,7 @@ async def diagnose(request: DiagnosisRequest):
         response = requests.post(
             f"{OLLAMA_BASE_URL}/api/generate",
             json={
-                "model": MODEL_NAME,
+                "model": active_model,
                 "prompt": f"{system_prompt}\n\nUser: {user_message}",
                 "stream": False,
                 "temperature": 0.7
@@ -348,6 +435,7 @@ async def diagnose(request: DiagnosisRequest):
 async def chat(request: ChatRequest):
 
     try:
+        active_model = _select_model(MODEL_NAME)
         prompt = ""
 
         for msg in request.messages:
@@ -358,7 +446,7 @@ async def chat(request: ChatRequest):
         response = requests.post(
             f"{OLLAMA_BASE_URL}/api/generate",
             json={
-                "model": MODEL_NAME,
+                "model": active_model,
                 "prompt": prompt,
                 "stream": False,
                 "temperature": request.temperature
@@ -393,25 +481,43 @@ async def openai_chat_completions(request: OpenAIChatRequest):
     OpenAI-compatible endpoint consumed by src/services/llm_service.py.
     Translates to Ollama /api/chat and wraps response into OpenAI choices shape.
     """
+    active_model = _select_model(request.model)
+    max_tokens = request.max_tokens if request.max_tokens is not None else OLLAMA_MAX_TOKENS
+
     payload = {
-        "model": request.model,
+        "model": active_model,
         "messages": [{"role": m.role, "content": m.content} for m in request.messages],
         "stream": False,
-        "options": {"temperature": request.temperature},
+        "keep_alive": "5m",
+        "options": {
+            "temperature": request.temperature,
+            "num_predict": int(max_tokens),
+            "num_ctx": int(OLLAMA_NUM_CTX),
+            "num_thread": int(OLLAMA_NUM_THREAD),
+        },
     }
 
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{OLLAMA_BASE_URL}/api/chat",
-                json=payload,
-                timeout=120.0,
-            )
-            response.raise_for_status()
+        async with _generation_semaphore:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{OLLAMA_BASE_URL}/api/chat",
+                    json=payload,
+                    timeout=float(OLLAMA_TIMEOUT_SECONDS),
+                )
+                response.raise_for_status()
     except httpx.ConnectError:
         raise HTTPException(
             status_code=503,
             detail="Ollama not running. Start with: ollama serve",
+        )
+    except httpx.ReadTimeout:
+        raise HTTPException(
+            status_code=504,
+            detail=(
+                "Ollama timed out generating a response. "
+                "Try a smaller model or lower max_tokens."
+            ),
         )
     except httpx.HTTPStatusError as exc:
         raise HTTPException(
@@ -519,5 +625,10 @@ async def pull_model(model: str = MODEL_NAME):
 
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Error pulling model: {e}")
+
+
+if __name__ == "__main__":
+    logger.info(f"Starting Local LLM Server on port {LLM_PORT}")
+    uvicorn.run(app, host="127.0.0.1", port=LLM_PORT)
 
 

@@ -1,7 +1,8 @@
 .page {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .main {
@@ -10,16 +11,20 @@
   align-items: stretch;
   justify-content: center;
   padding: var(--spacing-lg);
+  height: 100%;
   min-height: 0;
+  overflow: hidden;
 }
 
 .layout {
   width: 100%;
-  max-width: 900px;
+  max-width: 1100px;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
+  height: 100%;
   min-height: 0;
+  overflow: hidden;
 }
 
 /* Top bar with breadcrumb and start over */
@@ -72,10 +77,13 @@
 /* Two-column layout on wider screens */
 .columns {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(420px, 1.3fr);
   gap: var(--spacing-md);
   flex: 1;
+  height: 100%;
   min-height: 0;
+  align-items: stretch;
+  overflow: hidden;
 }
 
 @media (max-width: 680px) {
@@ -84,12 +92,14 @@
   }
 }
 
-/* Left panel: image + diagnosis */
+/* Left panel: image + chat */
 .leftPanel {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
-  overflow-y: auto;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .imageCard {
@@ -102,6 +112,7 @@
   align-items: center;
   gap: var(--spacing-sm);
   box-shadow: var(--shadow-md);
+  flex: 0 0 auto;
 }
 
 .imageLabel {
@@ -117,8 +128,11 @@
   background: var(--color-bg-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: var(--spacing-md);
+  padding: var(--spacing-lg);
   box-shadow: var(--shadow-md);
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
 }
 
 .diagnosisLabel {
@@ -131,15 +145,77 @@
 }
 
 .diagnosisText {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   color: var(--color-text-primary);
-  line-height: 1.7;
-  white-space: pre-wrap;
+  line-height: 1.75;
   word-break: break-word;
 }
 
-/* Right panel: chat */
-.rightPanel {
+.diagnosisText :global(p) {
+  margin: 0 0 var(--spacing-sm) 0;
+}
+
+.diagnosisText :global(p:last-child) {
+  margin-bottom: 0;
+}
+
+.diagnosisText :global(h1),
+.diagnosisText :global(h2),
+.diagnosisText :global(h3),
+.diagnosisText :global(h4) {
+  margin: 0 0 var(--spacing-sm) 0;
+  line-height: 1.35;
+  color: var(--color-text-primary);
+}
+
+.diagnosisText :global(ul),
+.diagnosisText :global(ol) {
+  margin: 0 0 var(--spacing-sm) var(--spacing-lg);
+  padding: 0;
+}
+
+.diagnosisText :global(li) {
+  margin-bottom: 4px;
+}
+
+.diagnosisText :global(strong) {
+  font-weight: 700;
+}
+
+.diagnosisText :global(em) {
+  font-style: italic;
+}
+
+.diagnosisText :global(code) {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px;
+  font-size: 0.9em;
+}
+
+.diagnosisText :global(pre) {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm);
+  overflow-x: auto;
+  margin: 0 0 var(--spacing-sm) 0;
+}
+
+.diagnosisText :global(pre code) {
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+
+.diagnosisText :global(a) {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+/* Chat card used in left panel */
+.chatPanel {
   display: flex;
   flex-direction: column;
   background: var(--color-bg-surface);
@@ -147,7 +223,17 @@
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   overflow: hidden;
+  flex: 1;
   min-height: 0;
+}
+
+/* Right panel: diagnosis summary */
+.rightPanel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .chatHeader {
@@ -173,7 +259,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 360px;
+  min-height: 300px;
   overflow: hidden;
 }
 

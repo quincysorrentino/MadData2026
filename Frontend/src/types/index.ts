@@ -7,7 +7,7 @@ export interface BoundingBox {
 
 export interface DiagnosisResult {
   diagnosis: string
-  bounding_box: BoundingBox
+  bounding_box: BoundingBox | null
 }
 
 export interface ChatMessage {

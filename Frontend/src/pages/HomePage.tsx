@@ -3,17 +3,25 @@ import { useNavigate } from 'react-router-dom'
 import Header from '../components/Header/Header'
 import BodySilhouette from '../components/BodySilhouette/BodySilhouette'
 import LoadingSpinner from '../components/LoadingSpinner/LoadingSpinner'
-import { postBodyPart } from '../api/bodyPart'
 import { useApp } from '../context/AppContext'
 import styles from './HomePage.module.css'
 
 const MOCK_DIAGNOSIS =
   `[DEV MODE] This is a placeholder diagnosis response.\n\nThe AI has detected a suspicious lesion in the selected area. Based on the classification, this appears consistent with a benign seborrheic keratosis. However, please consult a licensed dermatologist for any medical concerns.\n\nKey observations:\n• Irregular border detected\n• Asymmetric pigmentation\n• Diameter estimated at 8mm`
 
+const BODY_PART_NAMES: Record<number, string> = {
+  1: 'Face / Head',
+  2: 'Neck',
+  3: 'Chest / Torso',
+  4: 'Back',
+  5: 'Arm / Hand',
+  6: 'Leg / Foot',
+}
+
 export default function HomePage() {
   const navigate = useNavigate()
   const { setBodyPart, setUploadedImage, setDiagnosisResult } = useApp()
-  const [loading, setLoading] = useState(false)
+  const [loading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleDevBypass() {
@@ -38,22 +46,11 @@ export default function HomePage() {
     }, 'image/png')
   }
 
-  async function handlePartSelect(partId: number) {
-    setLoading(true)
+  function handlePartSelect(partId: number) {
+    const bodyPartName = BODY_PART_NAMES[partId] ?? 'Unknown Area'
+    setBodyPart(partId, bodyPartName)
     setError(null)
-    try {
-      const result = await postBodyPart(partId)
-      if (result.success) {
-        setBodyPart(partId, result.body_part_name)
-        navigate('/upload', { state: { bodyPartName: result.body_part_name } })
-      } else {
-        setError('Failed to select body part. Please try again.')
-      }
-    } catch {
-      setError('Could not connect to the server. Make sure the backend is running.')
-    } finally {
-      setLoading(false)
-    }
+    navigate('/upload', { state: { bodyPartName } })
   }
 
   return (

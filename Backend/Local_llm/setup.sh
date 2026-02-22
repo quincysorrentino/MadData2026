@@ -3,12 +3,12 @@
 
 set -e
 
-MODEL="qwen:8b"
+MODEL="qwen2.5:3b"
 OLLAMA_PORT="${OLLAMA_PORT:-11434}"
 LLM_PORT="${LLM_PORT:-8001}"
 
 echo "=================================================="
-echo "🚀 Local LLM Setup (Ollama + Qwen 3 8B)"
+echo "🚀 Local LLM Setup (Ollama + Qwen2.5 3B)"
 echo "=================================================="
 
 # Check if Ollama is installed

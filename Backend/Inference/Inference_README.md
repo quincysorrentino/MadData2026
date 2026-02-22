@@ -1,5 +1,40 @@
 # Backend Inference (Snapdragon Native-First)
 
+## Rebuilt API (Segmentation -> Classification)
+
+The API now runs a strict two-step ONNX pipeline:
+
+1. Segment lesion region from the input image (`segmenter.onnx`)
+2. Crop to the detected bounding box
+3. Classify the cropped region (`classifier.onnx`)
+
+Routes:
+
+- `GET /health`
+- `POST /infer` (alias: `POST /v1/infer`)
+- `POST /infer/debug` (alias: `POST /v1/infer/debug`)
+
+`/infer` response shape:
+
+- `label` (string)
+- `confidence` (0..1)
+- `boxes` (array of lesion bounding boxes)
+- `model_version` (active classifier + segmenter with provider)
+
+If no valid segmentation is found, classification falls back to the full image while still returning `boxes: []`.
+
+Default model paths in `.env.example` point to:
+
+- `models/classifier.onnx`
+- `models/Ahmed-Selem__Shifaa-Skin-Cancer-UNet-Segmentation/segmenter.onnx`
+
+For Snapdragon NPU, ensure ONNX Runtime exposes `QNNExecutionProvider`, then set:
+
+```dotenv
+REQUIRE_NPU=true
+ORT_EXECUTION_PROVIDERS=QNNExecutionProvider,CPUExecutionProvider
+```
+
 This guide is intentionally **native-first** for Snapdragon devices (simpler debugging than containers).
 
 ## Windows Snapdragon X Elite (local NPU)

@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useLocation, Navigate } from 'react-router-dom'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import Header from '../components/Header/Header'
 import DiagnosisImage from '../components/DiagnosisImage/DiagnosisImage'
 import ChatWindow from '../components/ChatWindow/ChatWindow'
@@ -26,15 +28,13 @@ export default function ChatPage() {
 
   // Allow direct access if context has data (covers dev bypass) or came from upload flow
   const state = location.state as LocationState | null
-  const hasData = uploadedImageObjectUrl && diagnosis && boundingBox
+  const hasData = uploadedImageObjectUrl && diagnosis
   if (!hasData) {
     return <Navigate to="/" replace />
   }
   void state
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'assistant', content: diagnosis },
-  ])
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -80,7 +80,7 @@ export default function ChatPage() {
           </div>
 
           <div className={styles.columns}>
-            {/* Left: image + initial diagnosis */}
+            {/* Left: uploaded image + follow-up chat */}
             <div className={styles.leftPanel}>
               <div className={styles.imageCard}>
                 <span className={styles.imageLabel}>Uploaded Image</span>
@@ -90,27 +90,31 @@ export default function ChatPage() {
                 />
               </div>
 
-              <div className={styles.diagnosisCard}>
-                <div className={styles.diagnosisLabel}>AI Diagnosis</div>
-                <p className={styles.diagnosisText}>{diagnosis}</p>
+              <div className={styles.chatPanel}>
+                <div className={styles.chatHeader}>
+                  <div className={styles.chatTitle}>Follow-up Chat</div>
+                  <div className={styles.chatSubtitle}>
+                    Ask questions about your diagnosis
+                  </div>
+                </div>
+
+                <div className={styles.chatBody}>
+                  {error && (
+                    <div className={`error-message ${styles.errorBanner}`}>{error}</div>
+                  )}
+                  <ChatWindow messages={messages} loading={loading} />
+                  <ChatInput onSend={handleSend} disabled={loading} />
+                </div>
               </div>
             </div>
 
-            {/* Right: chat interface */}
+            {/* Right: large diagnosis summary */}
             <div className={styles.rightPanel}>
-              <div className={styles.chatHeader}>
-                <div className={styles.chatTitle}>Follow-up Chat</div>
-                <div className={styles.chatSubtitle}>
-                  Ask questions about your diagnosis
+              <div className={styles.diagnosisCard}>
+                <div className={styles.diagnosisLabel}>AI Diagnosis Summary</div>
+                <div className={styles.diagnosisText}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{diagnosis}</ReactMarkdown>
                 </div>
-              </div>
-
-              <div className={styles.chatBody}>
-                {error && (
-                  <div className={`error-message ${styles.errorBanner}`}>{error}</div>
-                )}
-                <ChatWindow messages={messages} loading={loading} />
-                <ChatInput onSend={handleSend} disabled={loading} />
               </div>
             </div>
           </div>

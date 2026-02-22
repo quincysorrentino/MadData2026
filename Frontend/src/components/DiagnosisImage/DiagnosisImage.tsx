@@ -4,7 +4,7 @@ import styles from './DiagnosisImage.module.css'
 
 interface DiagnosisImageProps {
   imageObjectUrl: string
-  boundingBox: BoundingBox
+  boundingBox: BoundingBox | null
 }
 
 interface BoxStyle {
@@ -21,7 +21,10 @@ export default function DiagnosisImage({ imageObjectUrl, boundingBox }: Diagnosi
 
   function computeBox() {
     const img = imgRef.current
-    if (!img || !img.complete || img.naturalWidth === 0) return
+    if (!img || !img.complete || img.naturalWidth === 0 || !boundingBox) {
+      setBoxStyle(null)
+      return
+    }
     const scaleX = img.clientWidth / img.naturalWidth
     const scaleY = img.clientHeight / img.naturalHeight
     setBoxStyle({
