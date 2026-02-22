@@ -51,6 +51,12 @@ async def diagnose(
     state.session["full_prompt"] = full_prompt
     state.session["conversation"] = []
 
+    classifier_output = {
+        "classification": classification,
+        "bounding_box": bounding_box_dict,
+    }
+    print(f"[diagnose->llm] classifier_output={classifier_output}")
+
     diagnosis = await llm_service.call_llm(full_prompt, state.session["conversation"])
 
     state.session["conversation"].append({"role": "assistant", "content": diagnosis})

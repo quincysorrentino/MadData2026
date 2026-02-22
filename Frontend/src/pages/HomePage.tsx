@@ -6,9 +6,6 @@ import LoadingSpinner from '../components/LoadingSpinner/LoadingSpinner'
 import { useApp } from '../context/AppContext'
 import styles from './HomePage.module.css'
 
-const MOCK_DIAGNOSIS =
-  `[DEV MODE] This is a placeholder diagnosis response.\n\nThe AI has detected a suspicious lesion in the selected area. Based on the classification, this appears consistent with a benign seborrheic keratosis. However, please consult a licensed dermatologist for any medical concerns.\n\nKey observations:\n• Irregular border detected\n• Asymmetric pigmentation\n• Diameter estimated at 8mm`
-
 const BODY_PART_NAMES: Record<number, string> = {
   1: 'Face / Head',
   2: 'Neck',
@@ -20,31 +17,9 @@ const BODY_PART_NAMES: Record<number, string> = {
 
 export default function HomePage() {
   const navigate = useNavigate()
-  const { setBodyPart, setUploadedImage, setDiagnosisResult } = useApp()
+  const { setBodyPart } = useApp()
   const [loading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  async function handleDevBypass() {
-    // Create a tiny placeholder image blob so the chat page has something to display
-    const canvas = document.createElement('canvas')
-    canvas.width = 400
-    canvas.height = 300
-    const ctx = canvas.getContext('2d')!
-    ctx.fillStyle = '#1e3a5f'
-    ctx.fillRect(0, 0, 400, 300)
-    ctx.fillStyle = '#4a90d9'
-    ctx.font = 'bold 18px Inter, sans-serif'
-    ctx.textAlign = 'center'
-    ctx.fillText('Dev Mode — Placeholder Image', 200, 150)
-    canvas.toBlob(blob => {
-      if (!blob) return
-      const file = new File([blob], 'dev-placeholder.png', { type: 'image/png' })
-      setBodyPart(1, 'Face / Head (Dev)')
-      setUploadedImage(file)
-      setDiagnosisResult(MOCK_DIAGNOSIS, { x: 120, y: 80, w: 100, h: 80 })
-      navigate('/chat')
-    }, 'image/png')
-  }
 
   function handlePartSelect(partId: number) {
     const bodyPartName = BODY_PART_NAMES[partId] ?? 'Unknown Area'
@@ -76,12 +51,6 @@ export default function HomePage() {
           {error && (
             <div className={`error-message ${styles.error}`}>{error}</div>
           )}
-
-          <div className={styles.devBypass}>
-            <button className={styles.devBtn} onClick={handleDevBypass} type="button">
-              Dev: Preview Chat Page →
-            </button>
-          </div>
         </div>
       </main>
     </div>

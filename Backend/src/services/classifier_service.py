@@ -67,4 +67,7 @@ async def classify_image(image_bytes: bytes, filename: str) -> tuple[str, dict]:
             detail=f"Classifier server returned an error: {e.response.status_code} {e.response.text}",
         )
 
-    return parse_classifier_response(response.json())
+    raw_output = response.json()
+    print(f"[classifier-api raw] {raw_output}")
+
+    return parse_classifier_response(raw_output)

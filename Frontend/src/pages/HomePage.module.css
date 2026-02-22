@@ -49,29 +49,3 @@
   max-width: 400px;
   text-align: center;
 }
-
-.devBypass {
-  margin-top: var(--spacing-sm);
-  border-top: 1px dashed rgba(74, 144, 217, 0.15);
-  padding-top: var(--spacing-md);
-  width: 100%;
-  display: flex;
-  justify-content: center;
-}
-
-.devBtn {
-  background: none;
-  border: 1px dashed rgba(74, 144, 217, 0.3);
-  color: var(--color-text-muted);
-  border-radius: var(--radius-sm);
-  padding: 6px 16px;
-  font-size: var(--font-size-xs);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  letter-spacing: 0.04em;
-}
-
-.devBtn:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
