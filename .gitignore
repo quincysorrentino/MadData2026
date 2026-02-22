@@ -207,6 +207,7 @@ Backend/Inference/test_samples/
 Backend/Inference/test.jpg
 Backend/Inference/test_bcc.jpg
 Backend/Inference/test_ak.png
+Backend/Inference/test_*.png
 
 # Marimo
 marimo/_static/
