@@ -5,6 +5,7 @@ Dynamic system prompts for medical diagnosis context
 
 import os
 import requests
+import httpx
 import json
 from typing import Optional, Dict, List
 from fastapi import FastAPI, HTTPException
@@ -56,6 +57,20 @@ class DiagnosisResponse(BaseModel):
     diagnosis: str
     recommendations: str
     follow_up_questions: List[str]
+
+
+# --- OpenAI-compatible /v1/chat/completions models ---
+
+class OpenAIChatMessage(BaseModel):
+    role: str      # "system", "user", or "assistant"
+    content: str
+
+
+class OpenAIChatRequest(BaseModel):
+    model: str = MODEL_NAME
+    messages: List[OpenAIChatMessage]
+    temperature: float = 0.6
+    max_tokens: Optional[int] = None
 
 
 def build_diagnosis_prompt(
@@ -248,6 +263,54 @@ async def chat(request: ChatRequest):
     except Exception as e:
         logger.error(f"Chat error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/v1/chat/completions")
+async def openai_chat_completions(request: OpenAIChatRequest):
+    """
+    OpenAI-compatible endpoint consumed by src/services/llm_service.py.
+    Translates to Ollama /api/chat and wraps response into OpenAI choices shape.
+    """
+    payload = {
+        "model": request.model,
+        "messages": [{"role": m.role, "content": m.content} for m in request.messages],
+        "stream": False,
+        "options": {"temperature": request.temperature},
+    }
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{OLLAMA_BASE_URL}/api/chat",
+                json=payload,
+                timeout=120.0,
+            )
+            response.raise_for_status()
+    except httpx.ConnectError:
+        raise HTTPException(
+            status_code=503,
+            detail="Ollama not running. Start with: ollama serve",
+        )
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Ollama returned an error: {exc.response.status_code} {exc.response.text}",
+        )
+
+    data = response.json()
+    try:
+        content = data["message"]["content"]
+    except (KeyError, TypeError):
+        raise HTTPException(
+            status_code=502,
+            detail=f"Unexpected Ollama response format: {data}",
+        )
+
+    return {
+        "choices": [
+            {"message": {"role": "assistant", "content": content}}
+        ]
+    }
 
 
 def parse_diagnosis_response(text: str) -> Dict:
