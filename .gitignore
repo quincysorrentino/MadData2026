@@ -208,6 +208,9 @@ Backend/Inference/test.jpg
 Backend/Inference/test_bcc.jpg
 Backend/Inference/test_ak.png
 Backend/Inference/test_*.png
+Backend/Inference/test*.png
+Backend/Inference/test*.jpg
+Backend/Inference/test*.jpeg
 
 # Marimo
 marimo/_static/
@@ -218,3 +221,22 @@ __marimo__/
 node_modules/
 Frontend/dist/
 Frontend/.vite/
+
+# --- Repo-specific local artifacts ---
+# Additional local virtual environments used in this workspace
+.venv-1/
+**/.venv/
+**/.venv-*/
+Backend/Inference/.venv-qnn/
+Backend/Inference/.venv-test/
+
+# Local runtime/temp outputs
+*.tmp
+*.temp
+*.pid
+*.out
+*.err
+
+# OS clutter
+Thumbs.db
+Desktop.ini
