@@ -2,9 +2,9 @@
 
 ### Team Members
 
-- Vibhrav Jha: vjha3@wisc.edu
-- Bennett Nippert: bnippert@wisc.edu
-- Quincy Sorrentino: qsorrentino@wisc.edu
+- **Vibhrav Jha**: vjha3@wisc.edu
+- **Bennett Nippert**: bnippert@wisc.edu
+- **Quincy Sorrentino**: qsorrentino@wisc.edu
 
 End-to-end skin lesion analysis demo application with:
 
